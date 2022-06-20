@@ -1,8 +1,11 @@
 import "./App.css";
-import { Canvas, useFrame, extend, useThree } from "react-three-fiber";
-import * as THREE from "three";
-import { useRef, useMemo, useCallback } from "react";
+import { Canvas, extend, useThree } from "react-three-fiber";
+import React from "react";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { towerData } from "./towerData.js";
+import Tower from "./3dModels/Tower.js";
+import Cables from "./3dModels/Cables";
+
 extend({ OrbitControls });
 
 const Orbit = () => {
@@ -11,124 +14,63 @@ const Orbit = () => {
 };
 
 function App() {
-  /*  const Box = (props) => {
-    const ref = useRef();
-    useFrame((state) => {
-      //ref.current.rotation.x += 0.01;
-      ref.current.rotation.y += 0.01;
-    });
-    return (
-      <mesh ref={ref} {...props} castShadow receiveShadow>
-        <boxBufferGeometry />
-        <meshPhysicalMaterial
-          color="blue"
-          metalness={1}
-          opacity={0.5}
-          transparent
-          fog={false}
-        />
-      </mesh>
-    );
-  }; */
+  const { static_data } = towerData;
 
-  const HighTransmissionLine = (props) => {
-    const ref = useRef();
-    return (
-      <mesh {...props}>
-        {/* base */}
-        <mesh position={[0, 0, 0]} castShadow receiveShadow>
-          <boxBufferGeometry args={[5, 0.5, 1]} />
-          <meshPhysicalMaterial color="blue" />
-        </mesh>
-        {/* mast */}
-        <mesh position={[0, 2.5, 0]} castShadow receiveShadow>
-          <boxBufferGeometry args={[0.5, 5, 0.5]} />
-          <meshPhysicalMaterial color="blue" />
-        </mesh>
+  const renderTowers = () => {
+    const towers = [];
 
-        {/* horizontal pole */}
-
-        <mesh position={[0, 4.9, 0]} castShadow receiveShadow>
-          <boxBufferGeometry args={[2.5, 0.1, 0.1]} />
-          <meshPhysicalMaterial color="blue" />
+    for (let i = 0; i < static_data.n_tower; i++) {
+      const lat = (static_data.latitude[i] - static_data.latitude[0]) * 1000;
+      const lng = (static_data.longitude[i] - static_data.longitude[0]) * 1000;
+      towers.push(
+        <mesh key={i} position={[lat, 0, lng]}>
+          <Tower />
         </mesh>
-
-        {/* electrical connector */}
-        <mesh position={[1.2, 5.0, 0]} castShadow receiveShadow>
-          <cylinderBufferGeometry args={[0.02, 0.02, 0.2, 16]} />
-          <meshPhysicalMaterial color="blue" />
-        </mesh>
-        <mesh position={[0.6, 5.0, 0]} castShadow receiveShadow>
-          <cylinderBufferGeometry args={[0.02, 0.02, 0.2, 16]} />
-          <meshPhysicalMaterial color="blue" />
-        </mesh>
-        <mesh position={[-0.6, 5.0, 0]} castShadow receiveShadow>
-          <cylinderBufferGeometry args={[0.02, 0.02, 0.2, 16]} />
-          <meshPhysicalMaterial color="blue" />
-        </mesh>
-        <mesh position={[-1.2, 5.0, 0]} castShadow receiveShadow>
-          <cylinderBufferGeometry args={[0.02, 0.02, 0.2, 16]} />
-          <meshPhysicalMaterial color="blue" />
-        </mesh>
-      </mesh>
-    );
+      );
+    }
+    return towers;
   };
 
-  const FourLines = (props) => {
-    const ref = useRef();
-    const { dist } = props;
-    const side1 = dist[0] - dist[1];
-    const side2 = dist[3] - dist[2];
+  const renderCables = () => {
+    const connectors = [];
 
-    const length = (side1 ** 2 + side2 ** 2) ** (1 / 2);
-    console.log(side1);
-    console.log(side2);
-    console.log(length);
+    const cablesOffset = [0.02, 0, -0.02];
 
-    const angle = side1 / length;
-    console.log(angle);
+    cablesOffset.forEach((cablePosition) => {
+      for (let i = 0; i < static_data.n_tower - 1; i++) {
+        const lat = (static_data.latitude[i] - static_data.latitude[0]) * 1000;
+        const lng =
+          (static_data.longitude[i] - static_data.longitude[0]) * 1000;
 
-    useFrame((state) => {
-      ref.current.rotation.x = Math.PI / 2;
-      ref.current.rotation.z = Math.PI * angle;
+        const nextLat =
+          (static_data.latitude[i + 1] - static_data.latitude[0]) * 1000;
+        const nextLng =
+          (static_data.longitude[i + 1] - static_data.longitude[0]) * 1000;
+
+        const midLat = (nextLat + lat) / 2;
+        const midLng = (nextLng + lng) / 2;
+
+        connectors.push(
+          <Cables
+            lat={lat}
+            lng={lng}
+            midLat={midLat}
+            midLng={midLng}
+            nextLat={nextLat}
+            nextLng={nextLng}
+            cablePosition={cablePosition}
+          />
+        );
+      }
     });
-
-    return (
-      <mesh ref={ref} {...props}>
-        <mesh position={[-1.2, 10.0, -5.1]} castShadow receiveShadow>
-          <cylinderBufferGeometry args={[0.01, 0.01, 20, 16]} />
-          <meshPhysicalMaterial color="red" />
-        </mesh>
-        <mesh position={[0.6, 10.0, -5.1]} castShadow receiveShadow>
-          <cylinderBufferGeometry args={[0.01, 0.01, 20, 16]} />
-          <meshPhysicalMaterial color="red" />
-        </mesh>
-        <mesh position={[-0.6, 10.0, -5.1]} castShadow receiveShadow>
-          <cylinderBufferGeometry args={[0.01, 0.01, 20, 16]} />
-          <meshPhysicalMaterial color="red" />
-        </mesh>
-        <mesh position={[1.2, 10.0, -5.1]} castShadow receiveShadow>
-          <cylinderBufferGeometry args={[0.01, 0.01, 20, 16]} />
-          <meshPhysicalMaterial color="red" />
-        </mesh>
-      </mesh>
-    );
-  };
-
-  const TransmissionLine = (props) => {
-    return (
-      <mesh {...props} castShadow receiveShadow>
-        <cylinderBufferGeometry args={[0, 5, 10, 0]} />
-        <meshPhysicalMaterial color="blue" />
-      </mesh>
-    );
+    return connectors;
   };
 
   const Floor = (props) => {
     return (
       <mesh {...props} receiveShadow>
         <boxBufferGeometry args={[1000, 0.5, 1000]} />
-        <meshPhysicalMaterial />
+        <meshPhysicalMaterial color="#567d46" />
       </mesh>
     );
   };
@@ -144,37 +86,14 @@ function App() {
   };
 
   return (
-    <div style={{ height: "100vh", width: "100 vw" }}>
+    <div className="App">
       <Canvas
         style={{ background: "black" }}
-        camera={{ position: [-10, 10, -10] }}
+        camera={{ position: [-0.1, 0.4, 0.4] }}
         shadowMap
       >
-        {/*   <fog attach="fog" args={["white", 1, 10]} /> */}
-        {/* <Box position={[0, 1, 0]} /> */}
-        <HighTransmissionLine position={[0, 0, 0]} />
-        <FourLines position={[0, 0, 0]} dist={[0, 0, 0, 20]} />
-
-        <HighTransmissionLine position={[0, 0, 20]} />
-        <FourLines position={[0, 0, 20]} dist={[0, 10, 20, 50]} />
-
-        <HighTransmissionLine position={[10, 0, 50]} />
-        {/*  <FourLines position={[10, 0, 50]} dist={[10, 0, 0, 80]} /> */}
-
-        <HighTransmissionLine position={[0, 0, 80]} />
-        {/*      <TransmissionLine position={[0, 5, 0]} />
-        <TransmissionLine position={[20, 5, 10]} />
-        <TransmissionLine position={[40, 5, 40]} /> */}
-
-        {/* <mesh>
-          <meshBasicMaterial side={THREE.DoubleSide} />
-          <geometry>
-            <face3 args={[0, 1, 2]} attachArray="faces" />
-            <vector3 attachArray="vertices" />
-            <vector3 args={[0, 1, 1]} attachArray="vertices" />
-            <vector3 args={[0, 1, -1]} attachArray="vertices" />
-          </geometry>
-        </mesh> */}
+        {renderTowers()}
+        {renderCables()}
 
         <Bulb position={[200, 200, 200]} />
 
